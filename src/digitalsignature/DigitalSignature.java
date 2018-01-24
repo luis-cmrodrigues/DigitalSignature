@@ -24,22 +24,23 @@ public class DigitalSignature {
        KeyGenerator keygen = KeyGenerator.getInstance("AES");
        SecretKey key = keygen.generateKey();
        
-       // instanciar a cipher
-       Cipher c = Cipher.getInstance("AES");
-       c.init(Cipher.ENCRYPT_MODE, key);
+       // instanciar as ciphers
+       Cipher c_enc = Cipher.getInstance("AES");
+       c_enc.init(Cipher.ENCRYPT_MODE, key);
+       
+       Cipher c_dec = Cipher.getInstance("AES");
+       c_dec.init(Cipher.DECRYPT_MODE, key);
        
        
        //encripta o ficheiro
-       byte[] fichEncriptado = c.doFinal(file);
+       byte[] fichEncriptado = c_enc.doFinal(file);
        Files.write(new File("enc.txt").toPath(),fichEncriptado);
        printFileContent("enc.txt");
        
        //decifrar o ficheiro
-       //voltar a inicializar a cipher
-       c.init(Cipher.DECRYPT_MODE, key);
+       // fazer novamente a leitura do ficheiro a decifrar e decifrar
        file = Files.readAllBytes(new File ("enc.txt").toPath());
-       byte[] fichDecifrado = c.doFinal(file);
-       
+       byte[] fichDecifrado = c_dec.doFinal(file);
        
        Files.write(new File("dec.txt").toPath(),fichDecifrado);
        printFileContent("dec.txt");
