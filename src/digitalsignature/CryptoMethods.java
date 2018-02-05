@@ -7,6 +7,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,7 +19,12 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import java.util.Base64.Encoder;
 
-public class CipherMethods {
+/**
+ * Implementacao da assinatura digital com a biblioteca crypto
+ *
+ * @author Luis Rodrigues
+ */
+public class CryptoMethods {
 
     /**
      * funcão para cifrar um ficheiro na diretoria do projeto
@@ -27,6 +33,7 @@ public class CipherMethods {
      * @param key chave para cifar
      * @param fileName nome do ficheiro a encriptar
      * @throws IOException
+     * @throws java.security.InvalidKeyException
      */
     public static void cipherFile(String fileName, SecretKey key) throws IOException, InvalidKeyException {
 
@@ -43,10 +50,10 @@ public class CipherMethods {
                 fichEncriptado = c.doFinal(file);
                 Files.write(new File("enc.txt").toPath(), fichEncriptado);
             } catch (IllegalBlockSizeException | BadPaddingException ex) {
-                Logger.getLogger(CipherMethods.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(CryptoMethods.class.getName()).log(Level.SEVERE, null, ex);
             }
         } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
-            Logger.getLogger(CipherMethods.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(CryptoMethods.class.getName()).log(Level.SEVERE, null, ex);
         }
         printFileContent("enc.txt");
     }
@@ -58,6 +65,7 @@ public class CipherMethods {
      * @param key chave para decifrar
      * @param fileName nome do ficheiro a encriptar
      * @throws IOException
+     * @throws java.security.InvalidKeyException
      */
     public static void decipherFile(String fileName, SecretKey key) throws IOException, InvalidKeyException {
 
@@ -72,13 +80,13 @@ public class CipherMethods {
                 fichDecifrado = c.doFinal(file);
                 Files.write(new File("dec.txt").toPath(), fichDecifrado);
             } catch (IllegalBlockSizeException | BadPaddingException ex) {
-                Logger.getLogger(CipherMethods.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(CryptoMethods.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             printFileContent("dec.txt");
 
         } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
-            Logger.getLogger(CipherMethods.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(CryptoMethods.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }
@@ -104,16 +112,35 @@ public class CipherMethods {
      */
     public static void digestFile(String fileName) throws IOException {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] file = Files.readAllBytes(new File(fileName).toPath());
-            byte[] test = Base64.getEncoder().encode(md.digest(file));
-            byte[] digest = Base64.getDecoder().decode(test);
-            Files.write(new File("digest.txt").toPath(), digest);
+
+            String hashHex = bytesToHex(md.digest(file));
+
+            Files.write(new File("digest.txt").toPath(), hashHex.getBytes());
         } catch (NoSuchAlgorithmException ex) {
             System.out.println("ERROR: Digest does NOT exist ");
         }
         printFileContent("digest.txt");
 
+    }
+
+    /**
+     * converte um hash em byte[] para uma String em hexadecimal
+     *
+     * @param hash variavel byte[]
+     * @return String em hex. do input
+     */
+    private static String bytesToHex(byte[] hash) {
+        StringBuffer hexString = new StringBuffer();
+        for (int i = 0; i < hash.length; i++) {
+            String hex = Integer.toHexString(0xff & hash[i]);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
     }
 
 }
