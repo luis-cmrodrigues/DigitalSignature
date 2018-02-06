@@ -1,12 +1,16 @@
 package digitalsignature;
 
+import AuxiliaryClasses.EmptyKeyException;
+import AuxiliaryClasses.UsrInput;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.InvalidKeyException;
+import java.util.Base64;
 import java.util.Scanner;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import org.bouncycastle.crypto.InvalidCipherTextException;
 
 public class DigitalSignature {
 
@@ -25,9 +29,8 @@ public class DigitalSignature {
             case 1:
                 CryptoImplementation(userInput, key);
                 break;
-
             case 2:
-                BouncyImplementation(userInput);
+                BouncyImplementation(userInput, key);
                 break;
             default:
                 break;
@@ -46,9 +49,12 @@ public class DigitalSignature {
         CryptoMethods.digestFile("test.txt");
     }
 
-    private static void BouncyImplementation(Scanner userInput) throws IOException {
+    private static void BouncyImplementation(Scanner userInput, SecretKey key) throws IOException, EmptyKeyException, InvalidCipherTextException {
+        //byte[] keyBytes = key.toString();
+        byte[] keyBytes = Base64.getDecoder().decode(Base64.getEncoder().encodeToString(key.getEncoded()));
+        byte[] out = null;
 
-        System.out.println("Introuduza o nome do digest a usar");
+        System.out.println("Assine e verifique a assinatura com um destes digests:");
         System.out.println("1 -- sha1");
         System.out.println("2 -- sha256");
         System.out.println("3 -- sha512");
@@ -56,7 +62,9 @@ public class DigitalSignature {
 
         switch (UsrInput.readInt(userInput)) {
             case 1:
-                BouncyMethods.digestFile("sha1", "test.txt");
+                BouncyMethods.cipherStream(BouncyMethods.digestFile("sha1", "test.txt"), keyBytes, null);
+                BouncyMethods.decipherStream("DigSig_sha1.txt", keyBytes, null);
+                BouncyMethods.verificaHash();
                 break;
             case 2:
                 BouncyMethods.digestFile("sha256", "test.txt");
@@ -71,7 +79,7 @@ public class DigitalSignature {
                 break;
         }
 
-        BouncyMethods.printFileContent("test.txt");
+        //BouncyMethods.printFileContent("test.txt");
     }
 
 }

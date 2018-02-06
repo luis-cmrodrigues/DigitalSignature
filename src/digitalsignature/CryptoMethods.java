@@ -7,17 +7,13 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import java.util.Base64.Encoder;
 
 /**
  * Implementacao da assinatura digital com a biblioteca crypto
@@ -29,7 +25,6 @@ public class CryptoMethods {
     /**
      * funcão para cifrar um ficheiro na diretoria do projeto
      *
-     * @param c Cipher instanciada em modo de encriptacao
      * @param key chave para cifar
      * @param fileName nome do ficheiro a encriptar
      * @throws IOException
@@ -61,7 +56,6 @@ public class CryptoMethods {
     /**
      * funcao para decifrar o ficheiro na diretoria do projeto
      *
-     * @param c Cipher instanciada em modo de encriptacao
      * @param key chave para decifrar
      * @param fileName nome do ficheiro a encriptar
      * @throws IOException

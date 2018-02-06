@@ -5,16 +5,13 @@
  */
 package digitalsignature;
 
-import static digitalsignature.CryptoMethods.printFileContent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.crypto.Cipher;
-import javax.crypto.NoSuchPaddingException;
+import java.util.Arrays;
+import java.util.Base64;
+import org.bouncycastle.crypto.BufferedBlockCipher;
+import org.bouncycastle.crypto.DataLengthException;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.digests.MD5Digest;
@@ -33,20 +30,90 @@ import org.bouncycastle.crypto.params.ParametersWithIV;
  */
 public class BouncyMethods {
 
-    public static void cipherFile(String fileName, byte[] key, byte[] iv) throws IOException, InvalidCipherTextException {
-        byte[] fileContent = Files.readAllBytes(new File(fileName).toPath());
+    static byte[] hashOriginal;
+    static byte[] hashDecifrado;
+
+    /**
+     * cifra um digest com a chave fornecida usando AES
+     *
+     * @param hash digest a cifrar
+     * @param key chave a usar para cifrar o digest
+     * @param iv vetor de inicializacao
+     * @throws IOException
+     * @throws InvalidCipherTextException
+     */
+    public static void cipherStream(byte[] hash, byte[] key, byte[] iv) throws IOException, InvalidCipherTextException {
 
         PaddedBufferedBlockCipher encCipher = new PaddedBufferedBlockCipher(new AESEngine());
         KeyParameter kp = new KeyParameter(key);
 
-        encCipher.init(true, new ParametersWithIV(kp, new byte[16]));
+        if (iv == null) {
+            encCipher.init(true, kp);
+        } else {
+            encCipher.init(true, new ParametersWithIV(kp, new byte[16]));
+        }
 
-        byte[] out = new byte[encCipher.getOutputSize(fileContent.length)];
         
-        int len = encCipher.processBytes(fileContent, 0, fileContent.length, out, 0);
+        System.out.println("hash.length"+hash.length);
+        System.out.println("encCipher.getOutputSize(hash.length)"+encCipher.getOutputSize(hash.length));
+        byte[] out = new byte[encCipher.getOutputSize(hash.length)];
+
+        int len;
+        len = encCipher.processBytes(hash, 0, hash.length, out, 0);
         len += encCipher.doFinal(out, len);
+
+        out = Base64.getEncoder().encode(out);
+
+        Files.write(new File("DigSig_sha1.txt").toPath(), out);
+        //System.out.println(bytesToHex(out));
+        System.out.println("Digest cifrado");
+
+    }
+
+    /**
+     * decifra o ficheiro e retorna o digest que la esta - usa chave simetrica
+     *
+     * @param fileName nome do ficheiro
+     * @param key chave SIMETRICA a usar a decifrar
+     * @param iv vetor de inicializacao
+     * @return
+     */
+    public static byte[] decipherStream(String fileName, byte[] key, byte[] iv) throws IOException, DataLengthException, InvalidCipherTextException {
+        byte[] fileContent = Files.readAllBytes(new File(fileName).toPath());
+        fileContent = Base64.getDecoder().decode(fileContent);
+
+        //PaddedBufferedBlockCipher decCipher = new PaddedBufferedBlockCipher(new AESEngine());
+        PaddedBufferedBlockCipher decCipher = new PaddedBufferedBlockCipher(new AESEngine());
+        KeyParameter kp = new KeyParameter(key);
+
+        if (iv == null) {
+            decCipher.init(false, kp);
+        } else {
+            decCipher.init(false, new ParametersWithIV(kp, new byte[16]));
+        }
+
+        System.out.println(decCipher.getOutputSize(fileContent.length) + "  ---  " + decCipher.getUpdateOutputSize(fileContent.length) + "  ---  " + decCipher.getBlockSize());
         
+        byte[] out = new byte[decCipher.getOutputSize(fileContent.length)];         //  decCipher.getBlockSize()
         
+        System.out.println("Decipher needs "+out.length);
+//byte[] out = new byte[decCipher.getUpdateOutputSize(fileContent.length)+decCipher.getBlockSize()];         //  decCipher.getBlockSize()
+        
+        //offset para o doFinal
+        int len;
+        len = decCipher.processBytes(fileContent, 0, fileContent.length, out, 0);
+        len += decCipher.doFinal(out, len);
+        System.out.println("len is "+len);
+        
+        byte [] result = new byte [len];
+        System.arraycopy(out,0,result,0,len);
+        
+
+         System.out.println("result length is now "+result.length);
+        
+        hashDecifrado = out;
+        System.out.println("hash contido no ficheiro: " + bytesToHex(result));
+        return out;
     }
 
     /**
@@ -54,9 +121,10 @@ public class BouncyMethods {
      *
      * @param hashFunction digest a usar
      * @param fileName nome do ficheiro
+     * @return byte[] com o digest
      * @throws IOException
      */
-    public static void digestFile(String hashFunction, String fileName) throws IOException {
+    public static byte[] digestFile(String hashFunction, String fileName) throws IOException {
         Digest d;
         byte[] fileContent = Files.readAllBytes(new File(fileName).toPath());
 
@@ -83,10 +151,28 @@ public class BouncyMethods {
         byte[] hash = new byte[d.getDigestSize()];
         d.doFinal(hash, 0);
 
-        String hashHex = bytesToHex(hash);
-        Files.write(new File("digest.txt").toPath(), hashHex.getBytes());
-        printFileContent("digest.txt");
+        //guarda para um ficheiro, nao e necessario
+        //String hashHex = bytesToHex(hash);
+        //Files.write(new File("digest.txt").toPath(), hashHex.getBytes());
+        //printFileContent("digest.txt");
+        hashOriginal = hash;
+        return hash;
 
+    }
+
+    /**
+     * compara dois valores de hash: o original que vem da funcao digestFile e o
+     * obtido apos ser corrida a funcao decipherStream
+     *
+     */
+    public static void verificaHash() {
+        System.out.println("Original - " + bytesToHex(hashOriginal));
+        System.out.println("Decifrado - " + bytesToHex(hashDecifrado));
+        if (Arrays.equals(hashOriginal, hashDecifrado)) {
+            System.out.println("Assinatura verificada");
+        } else {
+            System.out.println("Assinatura não verificada");
+        }
     }
 
     /**
@@ -107,7 +193,7 @@ public class BouncyMethods {
      * @param hash variavel byte[]
      * @return String em hex. do input
      */
-    private static String bytesToHex(byte[] hash) {
+    public static String bytesToHex(byte[] hash) {
         StringBuffer hexString = new StringBuffer();
         for (int i = 0; i < hash.length; i++) {
             String hex = Integer.toHexString(0xff & hash[i]);
