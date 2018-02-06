@@ -14,15 +14,14 @@ import java.util.Scanner;
 public class UsrInput {
     /** função para leitura de um numero fornecido pelo user
      * 
+     * @param sc
      * @return int
      */
-    public static int readInt() {
-        Scanner reader = new Scanner(System.in);  // Reading from System.in
+    public static int readInt(Scanner sc) {
+        //Scanner reader = new Scanner(System.in);  // Reading from System.in
         System.out.println("Enter a number: ");
-        int n = reader.nextInt(); // Scans the next token of the input as an int.
+        int n = sc.nextInt(); // Scans the next token of the input as an int.
         //once finished
-        reader.close();
-
         return n;
     }
 

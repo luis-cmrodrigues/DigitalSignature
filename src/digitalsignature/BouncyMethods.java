@@ -10,11 +10,21 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 import org.bouncycastle.crypto.Digest;
+import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.digests.MD5Digest;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.crypto.digests.SHA512Digest;
+import org.bouncycastle.crypto.engines.AESEngine;
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.ParametersWithIV;
 
 /**
  * Implementacao da assinatura digital com a biblioteca BouncyCastle
@@ -22,6 +32,22 @@ import org.bouncycastle.crypto.digests.SHA512Digest;
  * @author Luis Rodrigues
  */
 public class BouncyMethods {
+
+    public static void cipherFile(String fileName, byte[] key, byte[] iv) throws IOException, InvalidCipherTextException {
+        byte[] fileContent = Files.readAllBytes(new File(fileName).toPath());
+
+        PaddedBufferedBlockCipher encCipher = new PaddedBufferedBlockCipher(new AESEngine());
+        KeyParameter kp = new KeyParameter(key);
+
+        encCipher.init(true, new ParametersWithIV(kp, new byte[16]));
+
+        byte[] out = new byte[encCipher.getOutputSize(fileContent.length)];
+        
+        int len = encCipher.processBytes(fileContent, 0, fileContent.length, out, 0);
+        len += encCipher.doFinal(out, len);
+        
+        
+    }
 
     /**
      * calculo do digest de um ficheiro usando a bib BouncyCastle
