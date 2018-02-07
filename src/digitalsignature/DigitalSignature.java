@@ -2,10 +2,13 @@ package digitalsignature;
 
 import AuxiliaryClasses.EmptyKeyException;
 import AuxiliaryClasses.UsrInput;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.security.InvalidKeyException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableEntryException;
+import java.security.cert.CertificateException;
 import java.util.Base64;
 import java.util.Scanner;
 import javax.crypto.KeyGenerator;
@@ -21,9 +24,10 @@ public class DigitalSignature {
         KeyGenerator keygen = KeyGenerator.getInstance("AES");
         SecretKey key = keygen.generateKey();
 
-        System.out.println("Selecione uma das implementacoes");
+        System.out.println("Selecione uma das opcoes");
         System.out.println("1 -- java.crypto");
         System.out.println("2 -- bouncyCastle");
+        //System.out.println("Gerar um par de chaves");
 
         switch (UsrInput.readInt(userInput)) {
             case 1:
@@ -32,6 +36,7 @@ public class DigitalSignature {
             case 2:
                 BouncyImplementation(userInput, key);
                 break;
+
             default:
                 break;
         }
@@ -49,31 +54,32 @@ public class DigitalSignature {
         CryptoMethods.digestFile("test.txt");
     }
 
-    private static void BouncyImplementation(Scanner userInput, SecretKey key) throws IOException, EmptyKeyException, InvalidCipherTextException {
+    private static void BouncyImplementation(Scanner userInput, SecretKey key) throws IOException, EmptyKeyException, InvalidCipherTextException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableEntryException, CertificateException {
         //byte[] keyBytes = key.toString();
         byte[] keyBytes = Base64.getDecoder().decode(Base64.getEncoder().encodeToString(key.getEncoded()));
         byte[] out = null;
 
-        System.out.println("Assine e verifique a assinatura com um destes digests:");
-        System.out.println("1 -- sha1");
-        System.out.println("2 -- sha256");
-        System.out.println("3 -- sha512");
-        System.out.println("4 -- md5");
+        System.out.println("Assine e verifique a assinatura com uma destas arquiteturas:");
+        System.out.println("1 -- Criptografia de chave simetrica");
+        System.out.println("2 -- Criptografia de chave publica");
+        System.out.println("3 -- imprime o certificado e as chaves");
 
         switch (UsrInput.readInt(userInput)) {
             case 1:
-                BouncyMethods.cipherStream(BouncyMethods.digestFile("sha1", "test.txt"), keyBytes, null);
-                BouncyMethods.decipherStream("DigSig_sha1.txt", keyBytes, null);
+                BouncyMethods.cipherStreamSimmetricKey(BouncyMethods.digestFile("test.txt"), keyBytes, null);
+                BouncyMethods.decipherStreamSimmetricKey("DigSig_sha1.txt", keyBytes, null);
                 BouncyMethods.verificaHash();
                 break;
             case 2:
-                BouncyMethods.digestFile("sha256", "test.txt");
+                if (KeyStoreManager.getPrivateKey() != null) {
+                    BouncyMethods.cipherStreamPKIX("test.txt", KeyStoreManager.getPrivateKey());
+                } else {
+                    System.out.println("ERRO: falha na obtencao da chave privada");
+                }
+
                 break;
             case 3:
-                BouncyMethods.digestFile("sha512", "test.txt");
-                break;
-            case 4:
-                BouncyMethods.digestFile("md5", "test.txt");
+                KeyStoreManager.teste();
                 break;
             default:
                 break;

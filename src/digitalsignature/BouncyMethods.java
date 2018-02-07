@@ -5,9 +5,12 @@
  */
 package digitalsignature;
 
+import static com.oracle.jrockit.jfr.ContentType.StackTrace;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
+import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Base64;
 import org.bouncycastle.crypto.BufferedBlockCipher;
@@ -22,6 +25,7 @@ import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
+import org.bouncycastle.crypto.signers.DSASigner;
 
 /**
  * Implementacao da assinatura digital com a biblioteca BouncyCastle
@@ -42,7 +46,7 @@ public class BouncyMethods {
      * @throws IOException
      * @throws InvalidCipherTextException
      */
-    public static void cipherStream(byte[] hash, byte[] key, byte[] iv) throws IOException, InvalidCipherTextException {
+    public static void cipherStreamSimmetricKey(byte[] hash, byte[] key, byte[] iv) throws IOException, InvalidCipherTextException {
 
         PaddedBufferedBlockCipher encCipher = new PaddedBufferedBlockCipher(new AESEngine());
         KeyParameter kp = new KeyParameter(key);
@@ -53,9 +57,8 @@ public class BouncyMethods {
             encCipher.init(true, new ParametersWithIV(kp, new byte[16]));
         }
 
-        
-        System.out.println("hash.length"+hash.length);
-        System.out.println("encCipher.getOutputSize(hash.length)"+encCipher.getOutputSize(hash.length));
+        System.out.println("hash.length" + hash.length);
+        System.out.println("encCipher.getOutputSize(hash.length)" + encCipher.getOutputSize(hash.length));
         byte[] out = new byte[encCipher.getOutputSize(hash.length)];
 
         int len;
@@ -78,7 +81,7 @@ public class BouncyMethods {
      * @param iv vetor de inicializacao
      * @return
      */
-    public static byte[] decipherStream(String fileName, byte[] key, byte[] iv) throws IOException, DataLengthException, InvalidCipherTextException {
+    public static byte[] decipherStreamSimmetricKey(String fileName, byte[] key, byte[] iv) throws IOException, DataLengthException, InvalidCipherTextException {
         byte[] fileContent = Files.readAllBytes(new File(fileName).toPath());
         fileContent = Base64.getDecoder().decode(fileContent);
 
@@ -93,27 +96,47 @@ public class BouncyMethods {
         }
 
         System.out.println(decCipher.getOutputSize(fileContent.length) + "  ---  " + decCipher.getUpdateOutputSize(fileContent.length) + "  ---  " + decCipher.getBlockSize());
-        
+
         byte[] out = new byte[decCipher.getOutputSize(fileContent.length)];         //  decCipher.getBlockSize()
-        
-        System.out.println("Decipher needs "+out.length);
+
+        System.out.println("Decipher needs " + out.length);
 //byte[] out = new byte[decCipher.getUpdateOutputSize(fileContent.length)+decCipher.getBlockSize()];         //  decCipher.getBlockSize()
-        
+
         //offset para o doFinal
         int len;
         len = decCipher.processBytes(fileContent, 0, fileContent.length, out, 0);
         len += decCipher.doFinal(out, len);
-        System.out.println("len is "+len);
-        
-        byte [] result = new byte [len];
-        System.arraycopy(out,0,result,0,len);
-        
+        System.out.println("len is " + len);
 
-         System.out.println("result length is now "+result.length);
-        
+        byte[] result = new byte[len];
+        System.arraycopy(out, 0, result, 0, len);
+
+        System.out.println("result length is now " + result.length);
+
         hashDecifrado = out;
         System.out.println("hash contido no ficheiro: " + bytesToHex(result));
         return out;
+    }
+
+    public static void cipherStreamPKIX(String fileName, PrivateKey key) throws IOException {
+        byte[] hash = digestFile(fileName);
+        
+        DSASigner signer = new DSASigner();
+        signer.init(true, null);
+        BigInteger[] vals = null;
+        
+        
+        try {
+            vals =(BigInteger[]) signer.generateSignature(hash);
+
+            /*for (BigInteger val : vals) {
+                System.out.println();
+
+            }*/
+        } catch (NullPointerException e) {
+            System.out.println("cipherStreamPXIX - ERRO: null pointer exception");
+        }
+
     }
 
     /**
@@ -124,27 +147,11 @@ public class BouncyMethods {
      * @return byte[] com o digest
      * @throws IOException
      */
-    public static byte[] digestFile(String hashFunction, String fileName) throws IOException {
+    public static byte[] digestFile(String fileName) throws IOException {
         Digest d;
         byte[] fileContent = Files.readAllBytes(new File(fileName).toPath());
 
-        switch (hashFunction) {
-            case "sha1":
-                d = new SHA1Digest();
-                break;
-            case "sha256":
-                d = new SHA256Digest();
-            case "sha512":
-                d = new SHA512Digest();
-                break;
-            case "md5":
-                d = new MD5Digest();
-                break;
-            default:
-                System.out.println("warning: BouncyMethods: default digest value - sha1");
-                d = new SHA1Digest();
-                break;
-        }
+        d = new SHA1Digest();
 
         d.reset();
         d.update(fileContent, 0, fileContent.length);
@@ -162,7 +169,7 @@ public class BouncyMethods {
 
     /**
      * compara dois valores de hash: o original que vem da funcao digestFile e o
-     * obtido apos ser corrida a funcao decipherStream
+     * obtido apos ser corrida a funcao decipherStreamSimmetricKey
      *
      */
     public static void verificaHash() {
