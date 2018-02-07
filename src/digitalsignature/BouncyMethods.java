@@ -118,6 +118,13 @@ public class BouncyMethods {
         return out;
     }
 
+    
+    /**
+     * nota: ver https://people.eecs.berkeley.edu/~jonah/bc/org/bouncycastle/crypto/DSA.html#method_summary
+     * @param fileName
+     * @param key
+     * @throws IOException 
+     */
     public static void cipherStreamPKIX(String fileName, PrivateKey key) throws IOException {
         byte[] hash = digestFile(fileName);
         
