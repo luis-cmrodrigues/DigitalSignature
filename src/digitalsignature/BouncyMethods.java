@@ -5,27 +5,36 @@
  */
 package digitalsignature;
 
-import static com.oracle.jrockit.jfr.ContentType.StackTrace;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
+import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Base64;
-import org.bouncycastle.crypto.BufferedBlockCipher;
 import org.bouncycastle.crypto.DataLengthException;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.digests.MD5Digest;
 import org.bouncycastle.crypto.digests.SHA1Digest;
-import org.bouncycastle.crypto.digests.SHA256Digest;
-import org.bouncycastle.crypto.digests.SHA512Digest;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.bouncycastle.crypto.params.DSAPrivateKeyParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.crypto.signers.DSASigner;
+import java.security.interfaces.DSAPrivateKey;
+import java.security.spec.DSAPrivateKeySpec;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.jcajce.provider.asymmetric.dsa.BCDSAPrivateKey;
+import java.security.Key;
+import java.security.interfaces.DSAKey;
+import org.bouncycastle.asn1.x509.DSAParameter;
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.crypto.params.DSAKeyParameters;
+import org.bouncycastle.crypto.params.DSAParameters;
+
 
 /**
  * Implementacao da assinatura digital com a biblioteca BouncyCastle
@@ -119,23 +128,63 @@ public class BouncyMethods {
     }
 
     
-    /**
-     * nota: ver https://people.eecs.berkeley.edu/~jonah/bc/org/bouncycastle/crypto/DSA.html#method_summary
+    /**     NAO ESTA A FUNCIONAR
+     * nota: ver
+     * https://people.eecs.berkeley.edu/~jonah/bc/org/bouncycastle/crypto/DSA.html#method_summary
+     *
      * @param fileName
      * @param key
-     * @throws IOException 
+     * @throws IOException
      */
-    public static void cipherStreamPKIX(String fileName, PrivateKey key) throws IOException {
+    public static void signFilePKIX(String fileName, PrivateKey key)  throws IOException {
         byte[] hash = digestFile(fileName);
-        
-        DSASigner signer = new DSASigner();
-        signer.init(true, null);
-        BigInteger[] vals = null;
-        
-        
-        try {
-            vals =(BigInteger[]) signer.generateSignature(hash);
 
+        DSASigner signer = new DSASigner();
+        DSAPrivateKeyParameters kp;
+        
+        // ---- obter o valor de x = chave privada 
+        // https://docs.oracle.com/javase/7/docs/api/java/security/spec/DSAPrivateKeySpec.html
+        
+        //KeyPair k = KeyStoreManager.getKeyPair();
+        
+        //DSAPrivateKeySpec pkeyData = new DSAPrivateKeySpec(BigInteger.ONE, BigInteger.ONE, BigInteger.ONE, BigInteger.ONE)
+        
+        
+        //PrivateKeyInfo pkinfo = PrivateKeyInfo.getInstance();
+        
+        //DSAPrivateKey dsaPK = new DSAPrivate Key();
+        //BigInteger x = dsaPK.getX();
+        //System.out.println("valor de x" + x);
+        
+        
+        // ----
+        
+        
+        // -------- outra maneira
+        //DSAParameter
+        
+        
+        DSAParameters pkPm = null ;
+        //DSAKeyParameters pubKeyParam = new DSAKeyParameters(false);
+        AsymmetricKeyParameter secKeyParam = new AsymmetricKeyParameter(true);
+        
+        
+        
+        //AsymmetricCipherKeyPair newKey = new AsymmetricCipherKeyPair(pubKeyParam, secKeyParam);
+        
+        
+        // ----------
+        
+        //kp = new DSAPrivateKeyParameters(new BigInteger(key.getEncoded()));
+        //System.out.println(bytesToHex(key.getEncoded()));
+        //signer.init(true, kp);
+        
+        //signer.generateSignature(hash);
+        
+        BigInteger[] vals = new BigInteger[2];
+
+        try {
+            vals = signer.generateSignature(hash);
             /*for (BigInteger val : vals) {
                 System.out.println();
 
@@ -143,9 +192,18 @@ public class BouncyMethods {
         } catch (NullPointerException e) {
             System.out.println("cipherStreamPXIX - ERRO: null pointer exception");
         }
-
     }
 
+
+    public void signFile(String fileName){
+        
+        
+        
+    }
+    
+    
+    
+    
     /**
      * calculo do digest de um ficheiro usando a bib BouncyCastle
      *

@@ -72,7 +72,9 @@ public class DigitalSignature {
                 break;
             case 2:
                 if (KeyStoreManager.getPrivateKey() != null) {
-                    BouncyMethods.cipherStreamPKIX("test.txt", KeyStoreManager.getPrivateKey());
+                    if (KeyStoreManager.getPublicKey() != null) {
+                        BouncyMethods.signFilePKIX("test.txt", KeyStoreManager.getPrivateKey());
+                    }
                 } else {
                     System.out.println("ERRO: falha na obtencao da chave privada");
                 }
