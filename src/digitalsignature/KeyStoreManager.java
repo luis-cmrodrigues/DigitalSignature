@@ -9,8 +9,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.AlgorithmParameters;
 import java.security.Certificate;
 import java.security.KeyPair;
 import java.security.KeyStoreException;
@@ -19,7 +21,14 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.DSAKey;
+import java.security.interfaces.DSAParams;
+import java.security.interfaces.DSAPrivateKey;
+import java.security.interfaces.DSAPublicKey;
 import java.util.Enumeration;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.bouncycastle.asn1.*;
 
 /**
@@ -64,17 +73,38 @@ public class KeyStoreManager {
         System.out.println("certificado: " + ks.getCertificate("client"));
         System.out.println("public key:  " + BouncyMethods.bytesToHex(myPublicKey.getEncoded()));
         System.out.println("private key: " + BouncyMethods.bytesToHex(myPrivateKey.getEncoded()));
+        System.out.println();
 
-        System.out.println("Atributos da chave privada " + pkEntry.getAttributes().size());
-
-        
         //   ---  guarda as chaves para ficheiros
         //Files.write(new File("secretKey.pem").toPath(), getPrivateKey().getEncoded());
         //Files.write(new File("publicKey.pem").toPath(), getPublicKey().getEncoded());
-        
 
-//        Certificate crt = (Certificate) ks.getCertificate("client");
-        //      System.out.println("Atributos da chave publica " + ks.getCertificate("client"));
+        //NOTA: tipo de certificado = x509
+        // obter os parametros do certificado diretamente
+        
+        X509Certificate crt = (X509Certificate) ks.getCertificate("client");
+
+        DSAPrivateKey dsaSk = (DSAPrivateKey) myPrivateKey;
+        DSAPublicKey dsaPk = (DSAPublicKey) myPublicKey;
+
+        DSAKey dKey = (DSAKey) myPublicKey;
+        DSAParams keyParams = dKey.getParams();
+
+        BigInteger sKeyValue = dsaSk.getX();
+        System.out.println("Valor da chave privada X: " + sKeyValue);
+
+        BigInteger pKeyValue = dsaPk.getY();
+        System.out.println("Valor da chave publica Y: " + pKeyValue);
+
+        BigInteger keyBase = keyParams.getG();
+        System.out.println("Valor da base da chave G: " + keyBase);
+
+        BigInteger keyPrime = keyParams.getP();
+        System.out.println("Valor do  primo P: " + keyPrime);
+
+        BigInteger keySubPrime = keyParams.getQ();
+        System.out.println("Valor do  sub primo Q: " + keySubPrime);
+
     }
 
     public static PrivateKey getPrivateKey() throws KeyStoreException, FileNotFoundException, IOException, NoSuchAlgorithmException, CertificateException {
@@ -138,7 +168,13 @@ public class KeyStoreManager {
      */
     public static KeyPair getKeyPair() {
         if (pKey == null || sKey == null) {
-            System.out.println("ATENCAO: uma das chaves encontra-se vazia");
+            try {
+                getPrivateKey();
+                getPublicKey();
+            } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException ex) {
+                Logger.getLogger(KeyStoreManager.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
         }
 
         return new KeyPair(pKey, sKey);
