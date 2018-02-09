@@ -4,7 +4,6 @@ import AuxiliaryClasses.EmptyKeyException;
 import AuxiliaryClasses.UsrInput;
 import java.io.IOException;
 import java.security.InvalidKeyException;
-import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableEntryException;
@@ -58,6 +57,8 @@ public class DigitalSignature {
         //byte[] keyBytes = key.toString();
         byte[] keyBytes = Base64.getDecoder().decode(Base64.getEncoder().encodeToString(key.getEncoded()));
         byte[] out = null;
+        
+        KeyStoreManager keyManager = new KeyStoreManager();
 
         System.out.println("Assine e verifique a assinatura com uma destas arquiteturas:");
         System.out.println("1 -- Criptografia de chave simetrica");
@@ -71,14 +72,7 @@ public class DigitalSignature {
                 BouncyMethods.verificaHash();
                 break;
             case 2:
-                if (KeyStoreManager.getPrivateKey() != null) {
-                    if (KeyStoreManager.getPublicKey() != null) {
-                        BouncyMethods.signFilePKIX("test.txt", KeyStoreManager.getPrivateKey());
-                    }
-                } else {
-                    System.out.println("ERRO: falha na obtencao da chave privada");
-                }
-
+                BouncyMethods.verifySignature("test.txt", BouncyMethods.signFilePKIX("test.txt", keyManager), keyManager);
                 break;
             case 3:
                 KeyStoreManager.teste();

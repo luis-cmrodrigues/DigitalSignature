@@ -5,16 +5,12 @@
  */
 package digitalsignature;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.AlgorithmParameters;
-import java.security.Certificate;
 import java.security.KeyPair;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -29,16 +25,50 @@ import java.security.interfaces.DSAPublicKey;
 import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.bouncycastle.asn1.*;
 
-/**
+/** Parte que trabalhar com a java keytool e obtem as chaves a partir de um ficheiro keystore
  *
+ * Atencao: os parametros definidos servem apenas para a keystore na diretoria do projeto
+ * 
  * @author Luis Rodrigues
  */
+
 public class KeyStoreManager {
 
-    static PublicKey pKey = null;
-    static PrivateKey sKey = null;
+    private static PublicKey pKey = null;
+    private static PrivateKey sKey = null;
+    //private static DSAPrivateKey dsaSecretKey = null;
+    //private static DSAPublicKey dsaPublicKey = null;
+    private static X509Certificate x590cert = null;
+
+    public KeyStoreManager() {
+        try {
+            setUp();
+        } catch (KeyStoreException | UnrecoverableEntryException | NoSuchAlgorithmException ex) {
+            Logger.getLogger(KeyStoreManager.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("ERROR: problema a inicializar o objeto");
+        }
+    }
+
+    public PublicKey getpKey() {
+        return pKey;
+    }
+
+    public PrivateKey getsKey() {
+        return sKey;
+    }
+
+//    public DSAPrivateKey getDsaSecretKey() {
+//        return dsaSecretKey;
+//    }
+
+//    public DSAPublicKey getDsaPublicKey() {
+//        return dsaPublicKey;
+//    }
+
+    public X509Certificate getX590cert() {
+        return x590cert;
+    }
 
     /**
      * Imprime o certificado e chave publica e privada As chaves são codificadas
@@ -78,10 +108,8 @@ public class KeyStoreManager {
         //   ---  guarda as chaves para ficheiros
         //Files.write(new File("secretKey.pem").toPath(), getPrivateKey().getEncoded());
         //Files.write(new File("publicKey.pem").toPath(), getPublicKey().getEncoded());
-
         //NOTA: tipo de certificado = x509
         // obter os parametros do certificado diretamente
-        
         X509Certificate crt = (X509Certificate) ks.getCertificate("client");
 
         DSAPrivateKey dsaSk = (DSAPrivateKey) myPrivateKey;
@@ -107,58 +135,6 @@ public class KeyStoreManager {
 
     }
 
-    public static PrivateKey getPrivateKey() throws KeyStoreException, FileNotFoundException, IOException, NoSuchAlgorithmException, CertificateException {
-        java.security.KeyStore ks = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
-        FileInputStream fis = new FileInputStream("clientkeystore");
-        PrivateKey myPrivateKey = null;
-
-        char[] password = "projetolab".toCharArray();
-        java.security.KeyStore.ProtectionParameter protParam = new java.security.KeyStore.PasswordProtection(password);
-
-        ks.load(fis, password);
-
-        Enumeration<String> alias = ks.aliases();
-
-        //System.out.println("alias: " + alias.nextElement());
-        //obtencao da chave privada contida na keystore
-        try {
-            java.security.KeyStore.PrivateKeyEntry pkEntry = (java.security.KeyStore.PrivateKeyEntry) ks.getEntry(alias.nextElement(), protParam);
-            myPrivateKey = pkEntry.getPrivateKey();
-
-            sKey = myPrivateKey;
-
-            //System.out.println("private key: " + BouncyMethods.bytesToHex(myPrivateKey.getEncoded()));
-        } catch (UnrecoverableEntryException ex) {
-            System.out.println("ERRO: na obtencao da chave");
-        }
-
-        return myPrivateKey;
-
-    }
-
-    public static PublicKey getPublicKey() throws KeyStoreException, FileNotFoundException, IOException, NoSuchAlgorithmException, CertificateException {
-        java.security.KeyStore ks = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
-        FileInputStream fis = new FileInputStream("clientkeystore");
-
-        char[] password = "projetolab".toCharArray();
-        java.security.KeyStore.ProtectionParameter protParam = new java.security.KeyStore.PasswordProtection(password);
-
-        ks.load(fis, password);
-
-        Enumeration<String> alias = ks.aliases();
-
-        //System.out.println("alias: " + alias.nextElement());
-        //obtencao da chave publica a partir do certificado gerado e guardado na keystore
-        PublicKey myPublicKey = ks.getCertificate("client").getPublicKey();
-        //System.out.println("certificado: " + ks.getCertificate("client"));
-        //System.out.println("public key: " + BouncyMethods.bytesToHex(myPublicKey.getEncoded()));
-
-        pKey = myPublicKey;
-
-        return myPublicKey;
-
-    }
-
     /**
      * constroi um keypair partindo do par de chaves publica e privada
      *
@@ -166,18 +142,60 @@ public class KeyStoreManager {
      *
      * @return keyPair
      */
-    public static KeyPair getKeyPair() {
+    public KeyPair getKeyPair() throws UnrecoverableEntryException {
         if (pKey == null || sKey == null) {
             try {
-                getPrivateKey();
-                getPublicKey();
-            } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException ex) {
+                setUp();
+            } catch (KeyStoreException | NoSuchAlgorithmException ex) {
                 Logger.getLogger(KeyStoreManager.class.getName()).log(Level.SEVERE, null, ex);
             }
 
         }
 
         return new KeyPair(pKey, sKey);
+    }
+
+    /**
+     * inicializa os pares de chaves e o certificado para nao ser preciso estar
+     * sempre a chamar as mesmas funcoes
+     *
+     */
+    public void setUp() throws KeyStoreException, UnrecoverableEntryException, NoSuchAlgorithmException {
+        KeyStore ks = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
+        char[] password = "projetolab".toCharArray();
+        FileInputStream fis;
+
+        try {
+            fis = new FileInputStream("clientkeystore");
+
+            try {
+                ks.load(fis, password);
+            } catch (IOException | NoSuchAlgorithmException | CertificateException ex) {
+                Logger.getLogger(KeyStoreManager.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println("SET-UP ERROR: problem initializing keystore");
+            }
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(KeyStoreManager.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("SET-UP ERROR: file not found");
+        }
+
+        java.security.KeyStore.ProtectionParameter protParam = new java.security.KeyStore.PasswordProtection(password);
+        pKey = ks.getCertificate("client").getPublicKey();
+
+        Enumeration<String> alias = ks.aliases();
+        java.security.KeyStore.PrivateKeyEntry pkEntry = (java.security.KeyStore.PrivateKeyEntry) ks.getEntry(alias.nextElement(), protParam);
+        sKey = pkEntry.getPrivateKey();
+
+        //NOTA: tipo de certificado = x509
+        // obter os parametros do certificado diretamente
+        x590cert = (X509Certificate) ks.getCertificate("client");
+
+//        dsaSecretKey = (DSAPrivateKey) sKey;
+//        dsaPublicKey = (DSAPublicKey) pKey;
+
+        //esta é a parte que permite obter os parametros da chave
+        //DSAKey dKey = (DSAKey) pKey;
+        //DSAParams keyParams = dKey.getParams();
     }
 
 }
